@@ -151,7 +151,7 @@ app.post("/loggingin", async (req, res) => {
             password: Joi.string().max(20).required()
         }
     );
-    const validationResult = schema.validate(req.body);
+    const validationResult = schema.validate({email, password});
     if (validationResult.error != null) {
         console.log(validationResult.error);
         res.redirect("/loginSubmit");
@@ -163,12 +163,6 @@ app.post("/loggingin", async (req, res) => {
         .project({ username: 1, email: 1, password: 1, _id: 1 })
         .toArray();
 
-    if (!result) {
-        var username = result[0].username;
-    }
-
-    console.log(result);
-    
     if (result.length != 1) {
         console.log("user not found");
         res.redirect("/loginSubmit");
@@ -176,6 +170,7 @@ app.post("/loggingin", async (req, res) => {
     }
     if (await bcrypt.compare(password, result[0].password)) {
         console.log("correct password");
+        var username = result[0].username;
         req.session.authenticated = true;
         req.session.username = username;
         req.session.cookie.maxAge = expireTime;
