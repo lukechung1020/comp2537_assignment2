@@ -29,6 +29,8 @@ var { database } = include("databaseConnection");
 
 const userCollection = database.db(mongodb_database).collection("users");
 
+app.set('view engine', 'ejs');
+
 app.use(express.urlencoded({ extended: false }));
 
 var mongoStore = MongoStore.create({
@@ -51,32 +53,14 @@ app.use(
 app.get("/", (req, res) => {
     var name = req.session.username;
     if (name) {
-        var htmlLoggedIn = `
-            Hello, ${name}<br>
-            <a href="/members"><button>Go to Members Area</button></a><br>
-            <a href="/logout"><button>Logout</button></a>
-        `;
-        res.send(htmlLoggedIn);
+        res.render("loggedin");
     } else {
-        var html = `
-            <div><a href="/signup"><button>Sign up</button></a></div>
-            <div><a href="/login"><button>Log in</button></a></div>
-        `;
-        res.send(html);
+        res.render("index");
     }
 });
 
 app.get("/signup", (req, res) => {
-    var html = `
-        Create User
-        <form action='/submitUser' method='post'>
-        <input name="username" type="text" placeholder="Name"></input><br>
-        <input name="email" type="email" placeholder="Email"></input><br>
-        <input name="password" type="password" placeholder="Password"></input><br>
-        <button>Submit</button>
-        </form>
-    `;
-    res.send(html);
+    res.render("signup");
 });
 
 app.get("/login", (req, res) => {
@@ -121,7 +105,8 @@ app.post("/submitUser", async (req, res) => {
         } else {
             result += 0;
         }
-        res.redirect("/signupSubmit/" + result);
+        req.session.validationResult = validationResult;
+        res.redirect("/signupSubmit/");
         return;
     }
 
@@ -191,7 +176,6 @@ app.get("/signupSubmit/:id", (req, res) => {
     var html = `
         Please provide
     `;
-
 
     if (result.substring(0, 1) === "1") {
         html += "a name";
