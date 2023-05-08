@@ -1,9 +1,13 @@
-<%- include("templates/header") %> 
-	<div>Users:</div>
-    <ul>
+<%- include("templates/header") %>
+    <div>
+        <h2>
+            Users:
+        </h2>
+    </div>
+    <ul class="list-group list-group-flush">
         <% let i=0; %>
-		<% for(i=0; i < users.length; i++) { %>
-        <%- include('templates/user', {user: users[i]})  %> 
-        <% } %> 
+            <% for(i=0; i < users.length; i++) { %>
+                <%- include('templates/user', {user: users[i]}) %>
+                    <% } %>
     </ul>
-<%- include("templates/footer") %> 
+<%- include("templates/footer") %>

@@ -1,6 +1,9 @@
 require("./utils.js");
 
 require("dotenv").config();
+
+const url = require("url");
+
 const express = require("express");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
@@ -31,6 +34,12 @@ const userCollection = database.db(mongodb_database).collection("users");
 
 app.set('view engine', 'ejs');
 
+const navLinks = [
+    {name: "Home", link: "/"},
+    {name: "Cats", link: "/members"},
+    {name: "Admin", link: "/admin"}
+];
+
 app.use(express.urlencoded({ extended: false }));
 
 var mongoStore = MongoStore.create({
@@ -49,30 +58,57 @@ app.use(
     })
 );
 
+function isValidSession(req) {
+    if (req.session.authenticated) {
+        return true;
+    }
+    return false;
+}
+
+function sessionValidation(req,res,next) {
+    if (isValidSession(req)) {
+        next();
+    }
+    else {
+        res.redirect('/login');
+    }
+}
+
+function isAdmin(req) {
+    if (req.session.user_type == 'admin') {
+        return true;
+    }
+    return false;
+}
+
+function adminAuthorization(req, res, next) {
+    if (!isAdmin(req)) {
+        res.status(403);
+        res.render("errorMessage", {error: "Not Authorized", navLinks: navLinks, currentURL: url.parse(req.url).pathname});
+        return;
+    }
+    else {
+        next();
+    }
+}
+
 // Main Page with Sign up and Log in button
 app.get("/", (req, res) => {
     var name = req.session.username;
+
     if (name) {
-        res.render("loggedin");
+        res.render("loggedin", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
     } else {
-        res.render("index");
+        res.render("index", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
     }
 });
 
 app.get("/signup", (req, res) => {
-    res.render("signup");
+    res.render("signup", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
 });
 
 app.get("/login", (req, res) => {
-    var html = `
-    Log In
-    <form action='/loggingin' method='post'>
-    <input name='email' type='text' placeholder='Email'><br>
-    <input name='password' type='password' placeholder='Password'><br>
-    <button>Submit</button>
-    </form>
-    `;
-    res.send(html);
+    res.render("login", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
 });
 
 app.post("/submitUser", async (req, res) => {
@@ -89,24 +125,8 @@ app.post("/submitUser", async (req, res) => {
     const validationResult = schema.validate({ username, email, password });
     if (validationResult.error != null) {
         console.log(validationResult.error);
-        var result = "";
-        if (!username) {
-            result += 1;
-        } else {
-            result += 0;
-        }
-        if (!email) {
-            result += 1;
-        } else {
-            result += 0;
-        }
-        if (!password) {
-            result += 1;
-        } else {
-            result += 0;
-        }
-        req.session.validationResult = validationResult;
-        res.redirect("/signupSubmit/");
+        req.session.validationResult = validationResult.error._original;
+        res.redirect("/signupSubmit");
         return;
     }
 
@@ -116,6 +136,7 @@ app.post("/submitUser", async (req, res) => {
         username: username,
         email: email,
         password: hashedPassword,
+        user_type: "admin"
     });
     console.log("Inserted user");
 
@@ -145,7 +166,7 @@ app.post("/loggingin", async (req, res) => {
 
     const result = await userCollection
         .find({ email: email })
-        .project({ username: 1, email: 1, password: 1, _id: 1 })
+        .project({ username: 1, email: 1, password: 1, user_type: 1, _id: 1 })
         .toArray();
 
     if (result.length != 1) {
@@ -156,8 +177,10 @@ app.post("/loggingin", async (req, res) => {
     if (await bcrypt.compare(password, result[0].password)) {
         console.log("correct password");
         var username = result[0].username;
+        var user_type = result[0].user_type;
         req.session.authenticated = true;
         req.session.username = username;
+        req.session.user_type = user_type;
         req.session.cookie.maxAge = expireTime;
 
         res.redirect("/members");
@@ -169,81 +192,50 @@ app.post("/loggingin", async (req, res) => {
     }
 });
 
-app.get("/signupSubmit/:id", (req, res) => {
-    var result = req.params.id;
+app.get("/signupSubmit", (req, res) => {
+    var result = req.session.validationResult;
+    console.log(result);
 
     var numEmpty = 0;
-    var html = `
+    var helpMSG = `
         Please provide
     `;
 
-    if (result.substring(0, 1) === "1") {
-        html += "a name";
+    if (result.username === "") {
+        helpMSG += "a name";
         numEmpty++;
     }
-    if (result.substring(1, 2) === "1") {
+    if (result.email === "") {
         if (numEmpty >= 1) {
-            html += ", ";
+            helpMSG += ", ";
         }
-        if (numEmpty >= 1 && result.substring(2, 3) === "0") {
-            html += "and ";
+        if (numEmpty >= 1 && result.email === "") {
+            helpMSG += "and ";
         }
-        html += "an email address";
+        helpMSG += "an email address";
         numEmpty++;
     }
-    if (result.substring(2, 3) === "1") {
+    if (result.password === "") {
         if (numEmpty >= 1) {
-            html += ", and ";
+            helpMSG += ", and ";
         }
-        html += "a password";
+        helpMSG += "a password";
     }
 
-    html += `. 
-        <br>
-        <br>
-        <a href="/signup">Try again</a>
-    `;
-
-    res.send(html);
+    res.render("signupSubmit", {helpMSG: helpMSG, navLinks: navLinks, currentURL: url.parse(req.url).pathname});
 });
 
 app.get("/members", (req, res) => {
     var name = req.session.username;
     if (!req.session.authenticated) {
         res.redirect("/");
+        return;
     }
-    var html = `
-        <h1>Hello, ${name}.</h1>
-    `;
-    // Generate a random number from 1,2,3
-    var randomNum = Math.floor(Math.random() * (4 - 1)) + 1;
-    if (randomNum == 1) {
-        html += `
-            <img src="/fluffy.gif" style="width:250px;"><br>
-        `;
-    } else if (randomNum == 2) {
-        html += `
-            <img src="/kitten.gif" style="width:250px;"><br>
-        `;
-    } else {
-        html += `
-            <img src="/socks.gif" style="width:250px;"><br>
-        `;
-    }
-    html += `
-        <a href="/logout"><button>Sign out</button></a>
-    `;
-    res.send(html);
+    res.render("cat", {navLinks: navLinks, currentURL: url.parse(req.url).pathname, username: name});
 });
 
 app.get("/loginSubmit", (req, res) => {
-    var html = `
-        Invalid email/password combination
-        <br>
-        <br>
-        <a href="/login">Try again<a>
-    `;
-    res.send(html);
+    res.render("loginSubmit", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
 });
 
 app.get("/logout", (req, res) => {
@@ -251,11 +243,33 @@ app.get("/logout", (req, res) => {
     res.redirect("/");
 });
 
+app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
+    const result = await userCollection.find().project({username: 1, user_type: 1, _id: 1}).toArray();
+ 
+    res.render("admin", {users: result, navLinks: navLinks, currentURL: url.parse(req.url).pathname});
+});
+
+app.post('/admin/promote', async (req,res) => {
+    var username = req.body.username;
+
+    await userCollection.updateOne({username: username}, {$set: {user_type: "admin"}});
+
+    res.redirect('/admin');
+});
+
+app.post('/admin/demote', async (req,res) => {
+    var username = req.body.username;
+
+    await userCollection.updateOne({username: username}, {$set: {user_type: "user"}});
+
+    res.redirect('/admin');
+})
+
 app.use(express.static(__dirname + "/public"));
 
 app.get("*", (req, res) => {
     res.status(404);
-    res.send("Page not found - 404");
+    res.render("404", {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
 });
 
 app.listen(port, () => {

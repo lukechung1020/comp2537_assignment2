@@ -1,12 +1,8 @@
 <%- include("templates/header") %>
     <main class="form-signin w-100 m-auto text-center">
         <div class="d-flex gap-2 justify-content-center py-5">
-            <form action="/submitUser" method="post">
-                <h1 class="h3 mb-3 fw-normal">Sign Up Here!</h1>
-                <div class="form-floating">
-                    <input name="username" type="text" class="form-control" id="floatingInput" placeholder="Username">
-                    <label for="floatingInput">Username</label>
-                </div>
+            <form action="/loggingin" method="post">
+                <h1 class="h3 mb-3 fw-normal">Sign In Here!</h1>
                 <div class="form-floating">
                     <input name="email" type="email" class="form-control" id="floatingInput"
                         placeholder="name@example.com">
@@ -17,7 +13,7 @@
                         placeholder="Password">
                     <label for="floatingPassword">Password</label>
                 </div>
-                <button class="w-100 btn btn-lg btn-primary mt-3" type="submit">Sign Up</button>
+                <button class="w-100 btn btn-lg btn-primary mt-3" type="submit">Sign In</button>
             </form>
         </div>
     </main>

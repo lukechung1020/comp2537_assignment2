@@ -1,1 +1,13 @@
-<li> <%= user.username %> </li>
+<li class="list-group-item">
+    <h4>
+        <%= user.username %> (<%= user.user_type %>)
+    </h4>
+    <form action="/admin/promote" method="post">
+        <input hidden="hidden" name="username" value="<%= user.username %>">
+        <button type="submit" class="btn btn-success rounded-pill">Promote to Admin</button>
+    </form>
+    <form action="/admin/demote" method="post">
+        <input hidden="hidden" name="username" value="<%= user.username %>">
+        <button type="submit" class="btn btn-danger rounded-pill">Demote to User</button>
+    </form>
+</li>
