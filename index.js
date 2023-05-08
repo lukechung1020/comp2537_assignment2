@@ -253,7 +253,9 @@ app.post('/admin/promote', async (req,res) => {
     var username = req.body.username;
 
     await userCollection.updateOne({username: username}, {$set: {user_type: "admin"}});
-
+    if (req.session.username === username) {
+        req.session.user_type = "admin";
+    }
     res.redirect('/admin');
 });
 
@@ -261,6 +263,9 @@ app.post('/admin/demote', async (req,res) => {
     var username = req.body.username;
 
     await userCollection.updateOne({username: username}, {$set: {user_type: "user"}});
+    if (req.session.username === username) {
+        req.session.user_type = "user";
+    }
 
     res.redirect('/admin');
 })
