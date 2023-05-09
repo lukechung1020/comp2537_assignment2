@@ -252,6 +252,18 @@ app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
 app.post('/admin/promote', async (req,res) => {
     var username = req.body.username;
 
+    // Can sql-injection through input field or URL
+    const schema = Joi.object({
+        username: Joi.string().alphanum.max(20).required()
+    });
+
+    const validationResult = schema.validate({username});
+    if (validationResult.error != null) {
+        console.log(validationResult.error);
+        res.redirect("/admin");
+        return; 
+    }
+
     await userCollection.updateOne({username: username}, {$set: {user_type: "admin"}});
     if (req.session.username === username) {
         req.session.user_type = "admin";
@@ -261,6 +273,18 @@ app.post('/admin/promote', async (req,res) => {
 
 app.post('/admin/demote', async (req,res) => {
     var username = req.body.username;
+
+    // Can sql-injection through input field or URL
+    const schema = Joi.object({
+        username: Joi.string().alphanum.max(20).required()
+    });
+
+    const validationResult = schema.validate({username});
+    if (validationResult.error != null) {
+        console.log(validationResult.error);
+        res.redirect("/admin");
+        return; 
+    }
 
     await userCollection.updateOne({username: username}, {$set: {user_type: "user"}});
     if (req.session.username === username) {
