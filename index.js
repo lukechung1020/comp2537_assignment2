@@ -254,7 +254,7 @@ app.post('/admin/promote', async (req,res) => {
 
     // Can sql-injection through input field or URL
     const schema = Joi.object({
-        username: Joi.string().alphanum.max(20).required()
+        username: Joi.string().alphanum().max(20).required()
     });
 
     const validationResult = schema.validate({username});
@@ -268,6 +268,8 @@ app.post('/admin/promote', async (req,res) => {
     if (req.session.username === username) {
         req.session.user_type = "admin";
     }
+    console.log(username + " promoted to admin");
+
     res.redirect('/admin');
 });
 
@@ -276,7 +278,7 @@ app.post('/admin/demote', async (req,res) => {
 
     // Can sql-injection through input field or URL
     const schema = Joi.object({
-        username: Joi.string().alphanum.max(20).required()
+        username: Joi.string().alphanum().max(20).required()
     });
 
     const validationResult = schema.validate({username});
@@ -290,6 +292,7 @@ app.post('/admin/demote', async (req,res) => {
     if (req.session.username === username) {
         req.session.user_type = "user";
     }
+    console.log(username + " demoted to user");
 
     res.redirect('/admin');
 })
